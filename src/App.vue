@@ -1,87 +1,38 @@
 <script setup lang="ts">
-import {onMounted, ref} from "vue";
-import {invoke} from "@tauri-apps/api/core";
-import {Document, InfoFilled, Menu as IconMenu, Setting} from "@element-plus/icons-vue";
-import {ElMessage} from "element-plus";
-
-const tableData = ref([
-  {name: '操作系统', value: '-'},
-  {name: 'Tauri 版本', value: '-'},
-  {name: '应用名称', value: '-'}
-])
-const showMessage = async () => {
-  const message = await invoke('show_message')
-  ElMessage.success(message)
-}
-
-onMounted(async () => {
-  const info = await invoke('get_system_info')
-  tableData.value = [
-    {name: '操作系统', value: info.platform},
-    {name: 'Tauri 版本', value: info.tauri_version},
-    {name: '应用名称', value: info.app_name}
-  ]
-})
+import {CirclePlus, QuestionFilled, Setting} from "@element-plus/icons-vue";
 </script>
 
 <template>
   <el-container class="layout-container">
     <el-aside class="aside-container">
-      <h5 class="mb-2">Default colors</h5>
+      <h3 class="mb-2">功能菜单</h3>
       <el-menu
-          default-active="2"
+          router
+          :default-active="$route.path"
           class="full-height-menu"
       >
-        <el-menu-item index="1">
+        <el-menu-item index="/verify">
           <el-icon>
-            <icon-menu/>
+            <QuestionFilled/>
           </el-icon>
-          <span>Navigator Two</span>
+          <span>校验</span>
         </el-menu-item>
-        <el-menu-item index="2" disabled>
+        <el-menu-item index="/new">
           <el-icon>
-            <document/>
+            <CirclePlus/>
           </el-icon>
-          <span>Navigator Three</span>
+          <span>生成</span>
         </el-menu-item>
-        <el-menu-item index="3">
+        <el-menu-item index="/keys">
           <el-icon>
-            <setting/>
+            <Setting/>
           </el-icon>
-          <span>Navigator Four</span>
+          <span>密钥</span>
         </el-menu-item>
       </el-menu>
     </el-aside>
     <el-main class="main-container">
-      <el-button type="primary" @click="showMessage">
-        <el-icon>
-          <InfoFilled/>
-        </el-icon>
-        显示消息
-      </el-button>
-      <el-card class="mt-4">
-        <template #header>
-          <div class="card-header">
-            <span>系统信息</span>
-          </div>
-        </template>
-        <el-table :data="tableData" stripe>
-          <el-table-column prop="name" label="项目"/>
-          <el-table-column prop="value" label="值"/>
-        </el-table>
-      </el-card>
-
-      <el-card class="mt-4">
-        <template #header>
-          <div class="card-header">
-            <span>系统信息</span>
-          </div>
-        </template>
-        <el-table :data="tableData" stripe>
-          <el-table-column prop="name" label="项目"/>
-          <el-table-column prop="value" label="值"/>
-        </el-table>
-      </el-card>
+      <router-view></router-view>
     </el-main>
   </el-container>
 </template>

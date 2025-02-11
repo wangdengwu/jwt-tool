@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "jwt_tool",
+  "productName": "jwt小工具",
   "version": "0.1.0",
   "identifier": "com.jwt.tool",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "jwt_tool",
-        "width": 800,
-        "height": 600
+        "title": "jwt小工具",
+        "width": 1200,
+        "height": 800
       }
     ],
     "security": {
