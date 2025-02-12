@@ -1,40 +1,84 @@
 <script setup lang="ts">
-import {reactive} from "vue";
+import {ref} from "vue";
+import {invoke} from "@tauri-apps/api/core";
+import {ElMessage} from "element-plus";
 
-const form = reactive({
-  name: '',
-  region: '',
-  date1: '',
-  date2: '',
-  delivery: false,
-  type: [],
-  resource: '',
-  desc: '',
-})
+const encodeToken = async () => {
+  if (header.value.trim() == '') {
+    ElMessage.error('header不能为空');
+    return
+  }
+  if (payload.value.trim() == '') {
+    ElMessage.error('payload不能为空');
+    return
+  }
+  if (privateKey.value.trim() == '') {
+    ElMessage.error('privateKey不能为空');
+    return
+  }
+  try {
+    encodedToken.value = await invoke('encode_token', {
+      header: header.value.trim(),
+      payload: payload.value.trim(),
+      privateKey: privateKey.value.trim()
+    });
+    ElMessage.success('生成成功');
+  } catch (error) {
+    ElMessage.error('生成失败:' + error);
+  }
+}
 
+const header = ref('')
+const payload = ref('')
+const privateKey = ref('')
+const encodedToken = ref('')
 </script>
 
 <template>
   <div class="page-container">
     <h1>生成Jwt</h1>
-    <el-row gutter="20">
+    <el-row :gutter="20">
       <el-col :span="12">
-        <el-form :model="form" label-width="auto" style="max-width: 600px">
-          <el-form-item label="Activity name">
-            <el-input v-model="form.name" />
-          </el-form-item>
-          <el-form-item label="Activity zone">
-            <el-select v-model="form.region" placeholder="please select your zone">
-              <el-option label="Zone one" value="shanghai" />
-              <el-option label="Zone two" value="beijing" />
-            </el-select>
-          </el-form-item>
-        </el-form>
+        <el-divider>Header</el-divider>
+        <el-input
+            v-model="header"
+            :autosize="{ minRows: 6, maxRows: 16 }"
+            type="textarea"
+            placeholder="header json"
+        />
+        <el-divider>Payload</el-divider>
+        <el-input
+            v-model="payload"
+            :autosize="{ minRows: 6, maxRows: 16 }"
+            type="textarea"
+            placeholder="payload json"
+        />
+        <el-divider>Private Key</el-divider>
+        <el-input
+            v-model="privateKey"
+            :autosize="{ minRows: 6, maxRows: 16 }"
+            type="textarea"
+            placeholder="private key"
+        />
+        <el-row class="center">
+          <el-button type="primary" @click="encodeToken">
+            生成
+          </el-button>
+        </el-row>
+      </el-col>
+      <el-col :span="12">
+        <el-divider>Jwt</el-divider>
+        <el-text>{{ encodedToken }}</el-text>
       </el-col>
     </el-row>
   </div>
 </template>
 
 <style scoped>
-
+.center {
+  margin-top: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 </style>

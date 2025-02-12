@@ -3,8 +3,8 @@ use base64::Engine as _;
 use jwt_compact::alg::Rsa;
 use jwt_compact::jwk::JsonWebKey;
 use jwt_compact::{AlgorithmExt, Claims, Header, UntrustedToken};
-use rsa::pkcs8::DecodePublicKey;
-use rsa::RsaPublicKey;
+use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey};
+use rsa::{RsaPrivateKey, RsaPublicKey};
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -59,11 +59,31 @@ fn decode_token(jwt_token: String, public_key: String) -> Result<String, String>
     }
 }
 
+#[tauri::command]
+fn encode_token(header: String, payload: String, private_key: String) -> Result<String, String> {
+    match general_purpose::STANDARD.decode(&private_key) {
+        Ok(pk_der) => match RsaPrivateKey::from_pkcs8_der(&pk_der) {
+            Ok(rpk) => match serde_json::from_str::<Header>(header.as_str()) {
+                Ok(h) => match serde_json::from_str::<Claims<Value>>(payload.as_str()) {
+                    Ok(c) => match Rsa::rs256().token(&h, &c, &rpk) {
+                        Ok(t) => Ok(t),
+                        Err(e) => Err(e.to_string()),
+                    },
+                    Err(e) => Err(e.to_string()),
+                },
+                Err(e) => Err(e.to_string()),
+            },
+            Err(e) => Err(e.to_string()),
+        },
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![decode_token])
+        .invoke_handler(tauri::generate_handler![decode_token, encode_token])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
