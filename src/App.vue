@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {CirclePlus, QuestionFilled, Setting} from "@element-plus/icons-vue";
+import {CirclePlusFilled, QuestionFilled, Tools} from "@element-plus/icons-vue";
 </script>
 
 <template>
@@ -19,20 +19,24 @@ import {CirclePlus, QuestionFilled, Setting} from "@element-plus/icons-vue";
         </el-menu-item>
         <el-menu-item index="/new">
           <el-icon>
-            <CirclePlus/>
+            <CirclePlusFilled/>
           </el-icon>
           <span>生成</span>
         </el-menu-item>
         <el-menu-item index="/keys">
           <el-icon>
-            <Setting/>
+            <Tools/>
           </el-icon>
           <span>密钥</span>
         </el-menu-item>
       </el-menu>
     </el-aside>
     <el-main class="main-container">
-      <router-view></router-view>
+      <router-view v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component"/>
+        </keep-alive>
+      </router-view>
     </el-main>
   </el-container>
 </template>
