@@ -4,7 +4,7 @@ use jwt_compact::alg::Rsa;
 use jwt_compact::jwk::JsonWebKey;
 use jwt_compact::{AlgorithmExt, Claims, Header, UntrustedToken};
 use rsa::pkcs1::{DecodeRsaPublicKey, EncodeRsaPublicKey};
-use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey};
+use rsa::pkcs8::{DecodePrivateKey, DecodePublicKey, EncodePrivateKey, EncodePublicKey};
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -88,7 +88,8 @@ fn new_keys(bit_size: usize) -> Result<String, String> {
             let private_der_encoded = private_key.to_pkcs8_der().unwrap();
             let private_base64_encoded =
                 general_purpose::STANDARD.encode(private_der_encoded.as_bytes());
-            let public_der_encoded = private_key.to_public_key().to_pkcs1_der().unwrap();
+            // 默认公钥格式统一为 SPKI (X.509 SubjectPublicKeyInfo)，与验签/业务侧一致
+            let public_der_encoded = private_key.to_public_key().to_public_key_der().unwrap();
             let public_base64_encoded =
                 general_purpose::STANDARD.encode(public_der_encoded.as_bytes());
             let b64 = Base64RsaKeys {
@@ -106,10 +107,14 @@ fn get_public(private_key: String) -> Result<String, String> {
     match general_purpose::STANDARD.decode(&private_key) {
         Ok(pk_der) => match RsaPrivateKey::from_pkcs8_der(&pk_der) {
             Ok(private_key) => {
-                let public_der_encoded = private_key.to_public_key().to_pkcs1_der().unwrap();
-                let public_base64_encoded =
-                    general_purpose::STANDARD.encode(public_der_encoded.as_bytes());
-                Ok(public_base64_encoded)
+                let public_key = private_key.to_public_key();
+                let spki_der = public_key.to_public_key_der().unwrap();
+                let pkcs1_der = public_key.to_pkcs1_der().unwrap();
+                let keys = PublicKeys {
+                    spki: general_purpose::STANDARD.encode(spki_der.as_bytes()),
+                    pkcs1: general_purpose::STANDARD.encode(pkcs1_der.as_bytes()),
+                };
+                Ok(serde_json::to_string(&keys).unwrap())
             }
             Err(e) => Err(e.to_string()),
         },
@@ -120,15 +125,25 @@ fn get_public(private_key: String) -> Result<String, String> {
 #[tauri::command]
 fn get_jwk(public_key: String) -> Result<String, String> {
     match general_purpose::STANDARD.decode(&public_key) {
-        Ok(pk_der) => match RsaPublicKey::from_pkcs1_der(&pk_der) {
-            Ok(public_key) => {
-                let jwk = JsonWebKey::from(&public_key);
-                Ok(serde_json::to_string(&jwk).unwrap())
+        Ok(pk_der) => {
+            // 优先按 SPKI 解析（默认格式），失败再回退 PKCS#1，两种公钥都能转
+            let parsed = RsaPublicKey::from_public_key_der(&pk_der)
+                .or_else(|_| RsaPublicKey::from_pkcs1_der(&pk_der));
+            match parsed {
+                Ok(public_key) => {
+                    let jwk = JsonWebKey::from(&public_key);
+                    Ok(serde_json::to_string(&jwk).unwrap())
+                }
+                Err(e) => Err(e.to_string()),
             }
-            Err(e) => Err(e.to_string()),
-        },
+        }
         Err(e) => Err(e.to_string()),
     }
+}
+
+#[tauri::command]
+fn new_kid() -> String {
+    uuid::Uuid::new_v4().to_string()
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -140,7 +155,8 @@ pub fn run() {
             encode_token,
             new_keys,
             get_public,
-            get_jwk
+            get_jwk,
+            new_kid
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -166,6 +182,12 @@ struct MyHeader {
 struct Base64RsaKeys {
     private: String,
     public: String,
+}
+
+#[derive(serde::Serialize)]
+struct PublicKeys {
+    spki: String,
+    pkcs1: String,
 }
 
 fn is_valid_base64(input: &str) -> bool {

@@ -20,12 +20,24 @@ const newKeys = async () => {
 
 const getPublic = async () => {
   try {
-    publicKey2.value = await invoke('get_public', {
+    let r: string = await invoke('get_public', {
       privateKey: privateKey2.value,
     });
+    let keys = JSON.parse(r);
+    publicKey2Spki.value = keys.spki;
+    publicKey2Pkcs1.value = keys.pkcs1;
     ElMessage.success('获取成功');
   } catch (error) {
     ElMessage.error('获取失败:' + error);
+  }
+}
+
+const newKid = async () => {
+  try {
+    kid.value = await invoke('new_kid');
+    ElMessage.success('生成成功');
+  } catch (error) {
+    ElMessage.error('生成失败:' + error);
   }
 }
 
@@ -46,9 +58,11 @@ const bitSize = ref(1024)
 const privateKey1 = ref('')
 const publicKey1 = ref('')
 const privateKey2 = ref('')
-const publicKey2 = ref('')
+const publicKey2Spki = ref('')
+const publicKey2Pkcs1 = ref('')
 const publicKey3 = ref('')
 const jwk = ref('')
+const kid = ref('')
 const datetime = ref('')
 </script>
 
@@ -99,8 +113,10 @@ const datetime = ref('')
             </el-row>
           </el-col>
           <el-col :span="12">
-            <el-divider>Public Key</el-divider>
-            <el-text>{{ publicKey2 }}</el-text>
+            <el-divider>Public Key (SPKI)</el-divider>
+            <el-text>{{ publicKey2Spki }}</el-text>
+            <el-divider>Public Key (PKCS#1)</el-divider>
+            <el-text>{{ publicKey2Pkcs1 }}</el-text>
           </el-col>
         </el-row>
       </el-tab-pane>
@@ -124,6 +140,17 @@ const datetime = ref('')
             <pre>{{ jwk }}</pre>
           </el-col>
         </el-row>
+      </el-tab-pane>
+      <el-tab-pane label="KID生成">
+        <el-form :inline="true">
+          <el-form-item>
+            <el-button type="primary" @click="newKid">
+              生成KID
+            </el-button>
+          </el-form-item>
+        </el-form>
+        <el-divider>Kid</el-divider>
+        <el-text>{{ kid }}</el-text>
       </el-tab-pane>
       <el-tab-pane label="时间戳">
         <el-form :inline="true">

@@ -26,3 +26,4 @@ jwt-compact = { version = "0.9.0-beta.1", features = ["default", "rsa"] }
 rsa = "0.9"
 base64 = "0.22"
 rand = "0.8.5"
+uuid = { version = "1", features = ["v4"] }
